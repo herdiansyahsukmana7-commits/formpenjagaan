@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login Petugas - E-Cuti Dinas Kesehatan Kota Tangerang Selatan</title>
+  <!-- Preload Auth Guard: Jika sesi petugas masih aktif, langsung arahkan ke index.html tanpa kedip -->
+  <script>
+    (function () {
+      try {
+        var u = JSON.parse(localStorage.getItem('ECUTI_AUTH_USER') || 'null');
+        var a = Number(localStorage.getItem('ECUTI_AUTH_LAST_ACTIVE') || '0');
+        var valid = u && u.username && (!a || (Date.now() - a <= 30 * 60 * 1000));
+        if (valid) {
+          window.location.replace('index.html');
+        }
+      } catch (e) {}
+    })();
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Pure Static CSS: Tampil instan 0ms tanpa perlu menunggu script eksternal -->
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; -webkit-font-smoothing: antialiased; }
+    body {
+      background: linear-gradient(135deg, #042f2e 0%, #0f172a 50%, #022c22 100%);
+      color: #1e293b;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      position: relative;
+      overflow: hidden;
+    }
+    .orb-1, .orb-2 {
+      position: absolute;
+      width: 380px;
+      height: 380px;
+      border-radius: 9999px;
+      filter: blur(90px);
+      pointer-events: none;
+    }
+    .orb-1 { top: -96px; left: -96px; background: rgba(20, 184, 166, 0.18); }
+    .orb-2 { bottom: -96px; right: -96px; background: rgba(16, 185, 129, 0.18); }
+    .card {
+      position: relative;
+      z-index: 10;
+      width: 100%;
+      max-width: 420px;
+      background: rgba(255, 255, 255, 0.97);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      border-radius: 24px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.55);
+      overflow: hidden;
+    }
+    .top-bar { height: 8px; background: linear-gradient(90deg, #14b8a6, #10b981, #f59e0b); }
+    .card-body { padding: 32px 28px 28px; text-align: center; }
+    .logo-wrap {
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 14px;
+      border-radius: 18px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      padding: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.04);
+    }
+    .logo-wrap img { width: 100%; height: 100%; object-fit: contain; }
+    .badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 9999px;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      background: #f0fdfa;
+      color: #0f766e;
+      border: 1px solid #99f6e4;
+      margin-bottom: 8px;
+    }
+    h1 { font-size: 21px; font-weight: 800; color: #0f172a; letter-spacing: -0.02em; }
+    .subtitle { font-size: 12px; font-weight: 600; color: #64748b; margin-top: 3px; }
+    .divider { height: 1px; background: #f1f5f9; margin: 20px 0 18px; }
+    .error-box {
+      margin-bottom: 14px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: #fff1f2;
+      border: 1px solid #fecdd3;
+      color: #be123c;
+      font-size: 12px;
+      font-weight: 600;
+      text-align: left;
+      line-height: 1.4;
+    }
+    .hidden { display: none !important; }
+    .form-group { text-align: left; margin-bottom: 14px; }
+    .form-label {
+      display: block;
+      font-size: 11px;
+      font-weight: 700;
+      color: #334155;
+      margin-bottom: 6px;
+    }
+    .input-wrap { position: relative; }
+    .form-input {
+      width: 100%;
+      padding: 11px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #0f172a;
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      border-radius: 12px;
+      outline: none;
+      transition: all 0.15s ease;
+    }
+    .form-input:focus {
+      background: #ffffff;
+      border-color: #0d9488;
+      box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.15);
+    }
+    .toggle-pass {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      font-size: 11px;
+      font-weight: 700;
+      color: #64748b;
+      cursor: pointer;
+      padding: 4px 6px;
+    }
+    .toggle-pass:hover { color: #0f766e; }
+    .btn-submit {
+      width: 100%;
+      padding: 12px 16px;
+      margin-top: 4px;
+      border: none;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #0d9488, #059669);
+      color: #ffffff;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 8px 16px -4px rgba(13, 148, 136, 0.35);
+      transition: transform 0.1s ease, filter 0.15s ease;
+    }
+    .btn-submit:hover { filter: brightness(1.05); }
+    .btn-submit:active { transform: scale(0.99); }
+    .security-note {
+      margin-top: 18px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      text-align: left;
+      font-size: 11px;
+      color: #64748b;
+      line-height: 1.45;
+    }
+    .security-note code {
+      font-weight: 700;
+      color: #0f766e;
+      background: #f0fdfa;
+      padding: 1px 5px;
+      border-radius: 4px;
+    }
+    .footer {
+      background: #f8fafc;
+      border-top: 1px solid #f1f5f9;
+      padding: 12px 24px;
+      text-align: center;
+      font-size: 11px;
+      color: #94a3b8;
+      font-weight: 500;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="orb-1"></div>
+  <div class="orb-2"></div>
+
+  <div class="card">
+    <div class="top-bar"></div>
+    <div class="card-body">
+      <div class="logo-wrap">
+        <img src="assets/images/brand/logo.png" alt="Logo Dinas Kesehatan Kota Tangerang Selatan">
+      </div>
+      <span class="badge">Portal Kepegawaian Resmi</span>
+      <h1>E-CUTI DINKES</h1>
+      <p class="subtitle">Dinas Kesehatan Kota Tangerang Selatan</p>
+
+      <div class="divider"></div>
+
+      <div id="authErrorMessage" class="error-box hidden"></div>
+
+      <form id="petugasLoginForm" onsubmit="handlePetugasLogin(event)">
+        <div class="form-group">
+          <label class="form-label" for="loginUsername">Username / Login Petugas</label>
+          <input type="text" id="loginUsername" class="form-input" required autocomplete="username" placeholder="Masukkan username petugas...">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="loginPassword">Password</label>
+          <div class="input-wrap">
+            <input type="password" id="loginPassword" class="form-input" style="padding-right: 64px;" required autocomplete="current-password" placeholder="Masukkan password...">
+            <button type="button" class="toggle-pass" onclick="togglePassLogin()" id="btnTogglePass">Lihat</button>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-submit">Masuk ke Sistem E-Cuti</button>
+      </form>
+
+      <div class="security-note">
+        <strong>Akses Petugas Penginput:</strong> Gunakan akun petugas untuk mengelola permohonan dan mencetak surat cuti. Login awal: <code>admin</code> &bull; Password: <code>dinkes123</code> (Dapat diubah di menu Pengaturan).
+      </div>
+    </div>
+    <div class="footer">
+      &copy; 2026 Dinas Kesehatan Kota Tangerang Selatan
+    </div>
+  </div>
+
+  <script src="assets/js/auth.js"></script>
+</body>
+
+</html>
+
