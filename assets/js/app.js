@@ -4,8 +4,8 @@
  * Aplikasi Pengelolaan Cuti, Cetak Dokumen Resmi A4 & Rekapitulasi Periodik
  */
 
-// Endpoint API mendukung Netlify Serverless Proxy (/api/gas) & Google Apps Script Web App
-const DEFAULT_SCRIPT_URL = '';
+// Endpoint API Google Apps Script Web App resmi (Database Terkunci)
+const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwVmRv3_QAh9EFH9z31_PlsXbqUwW9NEfkyfB-XNI-Roni4jWxSHpV0i8P7IlfRLswaNA/exec';
 
     // Konfigurasi Pejabat Default yang bisa diubah lewat menu Pengaturan
     let pejabatDefault = JSON.parse(localStorage.getItem('DINKES_PEJABAT_CFG') || 'null') || {
@@ -18,13 +18,15 @@ const DEFAULT_SCRIPT_URL = '';
 
     // Konfigurasi Akun Petugas Penginput Default
     let state = {
-      apiUrl: localStorage.getItem('GAS_CUTI_API_URL') || DEFAULT_SCRIPT_URL,
+      apiUrl: DEFAULT_SCRIPT_URL,
       activeMenu: 'dashboard',
       cutiList: [],
       pegawaiList: [],
       selectedPrintId: '',
       isLoggedIn: sessionStorage.getItem('DINKES_LOGGED_IN') === 'true'
     };
+    // Pastikan API URL selalu terkunci ke database resmi
+    localStorage.setItem('GAS_CUTI_API_URL', DEFAULT_SCRIPT_URL);
 
     const DEMO_PEGAWAI = [
       { NIP: '198211012025211017', Nama: 'Rudy, S.Sos.I', Jabatan: 'Penata Layanan Operasional', Pangkat: 'IX', 'Masa Kerja': '01 Tahun 03 Bulan', 'Unit Kerja': 'Dinas Kesehatan', Telp: '085694964069', Status: 'PPPK' },
@@ -1748,9 +1750,9 @@ const DEFAULT_SCRIPT_URL = '';
     }
 
     function saveConfig() {
-      const val = document.getElementById('inputApiUrl').value.trim();
-      state.apiUrl = val;
-      localStorage.setItem('GAS_CUTI_API_URL', val);
+      // URL API terkunci ke database resmi
+      state.apiUrl = DEFAULT_SCRIPT_URL;
+      localStorage.setItem('GAS_CUTI_API_URL', DEFAULT_SCRIPT_URL);
 
       pejabatDefault.kadinkesNama = document.getElementById('cfgKadinkesNama').value.trim() || 'dr. Allin Hendalin Mahdaniar, M.K.M.';
       pejabatDefault.kadinkesNip = document.getElementById('cfgKadinkesNip').value.trim() || '197610152007012007';

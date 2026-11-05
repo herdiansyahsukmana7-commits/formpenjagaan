@@ -49,14 +49,11 @@ penjagaancuti1/
    - Klik **Deploy site**.
 6. Anda akan mendapatkan URL share resmi Netlify (misal: `https://e-cuti-dinkes.netlify.app`).
 
-## ⚙️ Menghubungkan ke Google Spreadsheet
+## ⚙️ URL Spreadsheet Database Terkunci
 
-1. Buka Google Spreadsheet baru.
-2. Buka menu **Extensions** $\rightarrow$ **Apps Script**.
-3. Salin seluruh isi file [`Code.gs`](file:///d:/fd%20me/bahan%20sppd%20app/1.Pengajuan%20cuti/penjagaancuti1/Code.gs) ke editor Apps Script.
-4. Klik fungsi `setupSheets` lalu klik **Run** sekali untuk membuat sheet otomatis.
-5. Klik **Deploy** $\rightarrow$ **New deployment** $\rightarrow$ Pilih jenis **Web app**:
-   - Execute as: **Me**
-   - Who has access: **Anyone**
-6. Salin URL Web App yang didapat, lalu masukkan di menu **Pengaturan API** (ikon gear di aplikasi web) $\rightarrow$ Simpan.
+Aplikasi sudah dikonfigurasi dan **terkunci otomatis** langsung ke Google Apps Script Web App resmi:
+```text
+https://script.google.com/macros/s/AKfycbwVmRv3_QAh9EFH9z31_PlsXbqUwW9NEfkyfB-XNI-Roni4jWxSHpV0i8P7IlfRLswaNA/exec
+```
+Pengguna tidak perlu mengatur URL secara manual lagi saat membuka di localhost maupun di Netlify.
 
