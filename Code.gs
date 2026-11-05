@@ -13,15 +13,15 @@ const SHEET_NAMES = {
 // Header standar untuk masing-masing sheet
 const SHEET_HEADERS = {
   CUTI: [
-    'id_pengajuan', 'tanggal_surat', 'nip', 'nama', 'jabatan', 'pangkat_gol',
+    'id_pengajuan', 'tanggal_surat', 'nomor_surat', 'status_kepegawaian', 'nip', 'nama', 'jabatan', 'pangkat_gol',
     'jenis_cuti', 'tanggal_mulai', 'tanggal_selesai', 'lama_cuti',
     'alasan_cuti', 'alamat_cuti', 'status_pengajuan', 'catatan_atasan',
     'is_deleted', 'created_at', 'updated_at',
     'masa_kerja', 'unit_kerja', 'telp', 'sisa_cuti_tahunan',
     'jenis_pejabat', 'atasan_nama', 'atasan_nip', 'pejabat_nama', 'pejabat_nip'
   ],
-  PEGAWAI: ['NIP', 'Nama', 'Jabatan', 'Pangkat', 'Masa Kerja', 'Unit Kerja', 'Telp', 'Atasan Nama', 'Atasan NIP'],
-  REKAP: ['NIP', 'Nama', 'Jatah Cuti N', 'Sisa Cuti N-1', 'Sisa Cuti N-2', 'Total Hak Cuti', 'Cuti Diambil', 'Sisa Cuti Saat Ini']
+  PEGAWAI: ['NIP', 'Nama', 'Jabatan', 'Pangkat', 'Masa Kerja', 'Unit Kerja', 'Telp', 'Atasan Nama', 'Atasan NIP', 'Status'],
+  REKAP: ['NIP', 'Nama', 'Jatah Cuti', 'N-2', 'N-1', 'N', 'Sisa Cuti Saat Ini']
 };
 
 /**
@@ -63,7 +63,7 @@ function jsonResponse(data, status = 200) {
     status: status,
     ...data
   }))
-  .setMimeType(ContentService.MimeType.JSON);
+    .setMimeType(ContentService.MimeType.JSON);
 }
 
 /**
@@ -192,11 +192,13 @@ function doPost(e) {
     // 1. CREATE DATA CUTI
     if (action === 'create') {
       const newId = 'CUTI-' + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyyMMdd-") +
-                    Math.floor(1000 + Math.random() * 9000);
+        Math.floor(1000 + Math.random() * 9000);
 
       const record = {
         id_pengajuan: newId,
         tanggal_surat: payload.tanggal_surat || Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd"),
+        nomor_surat: payload.nomor_surat || '',
+        status_kepegawaian: payload.status_kepegawaian || 'PPPK',
         nip: String(payload.nip || ''),
         nama: payload.nama || '',
         jabatan: payload.jabatan || '',
@@ -225,6 +227,10 @@ function doPost(e) {
 
       const newRow = headers.map(h => record[h] !== undefined ? record[h] : '');
       sheet.appendRow(newRow);
+
+      // Sinkronisasi otomatis ke Master Pegawai jika belum ada / kosong
+      syncPegawaiFromCuti(ss, record);
+
       return jsonResponse({ message: 'Pengajuan cuti berhasil dibuat', id: newId });
     }
 
@@ -246,7 +252,7 @@ function doPost(e) {
       }
 
       const updateFields = [
-        'tanggal_surat', 'nip', 'nama', 'jabatan', 'pangkat_gol',
+        'tanggal_surat', 'nomor_surat', 'status_kepegawaian', 'nip', 'nama', 'jabatan', 'pangkat_gol',
         'jenis_cuti', 'tanggal_mulai', 'tanggal_selesai', 'lama_cuti',
         'alasan_cuti', 'alamat_cuti', 'status_pengajuan', 'catatan_atasan',
         'masa_kerja', 'unit_kerja', 'telp', 'sisa_cuti_tahunan',
@@ -266,6 +272,9 @@ function doPost(e) {
       if (updatedAtCol > 0) {
         sheet.getRange(rowIndex, updatedAtCol).setValue(now);
       }
+
+      // Sinkronisasi otomatis ke Master Pegawai jika ada data baru / kosong yang diisi
+      syncPegawaiFromCuti(ss, payload);
 
       return jsonResponse({ message: 'Data pengajuan cuti berhasil diperbarui' });
     }
@@ -302,5 +311,127 @@ function doPost(e) {
     return jsonResponse({ error: error.toString() }, 500);
   } finally {
     lock.releaseLock();
+  }
+}
+
+/**
+ * Sinkronisasi otomatis dari permohonan cuti yang diisi manual ke Master Pegawai.
+ * Jika pegawai belum ada di sheet masterpegawai, akan dibuatkan baris baru.
+ * Jika sudah ada, kolom-kolom yang masih kosong akan diisi dengan data manual ini.
+ */
+function syncPegawaiFromCuti(ss, item) {
+  try {
+    const nip = String(item.nip || '').trim();
+    const nama = String(item.nama || '').trim();
+    if (!nip && !nama) return;
+
+    let pegSheet = ss.getSheetByName(SHEET_NAMES.PEGAWAI);
+    if (!pegSheet) {
+      setupSheets();
+      pegSheet = ss.getSheetByName(SHEET_NAMES.PEGAWAI);
+    }
+    if (!pegSheet) return;
+
+    const data = pegSheet.getDataRange().getValues();
+    if (data.length === 0) return;
+
+    const headers = data[0].map(h => String(h || '').trim().toLowerCase());
+    const nipIdx = headers.findIndex(h => h === 'nip' || h === 'ni pppk');
+    const namaIdx = headers.indexOf('nama');
+    const statusIdx = headers.indexOf('status');
+    const jabIdx = headers.indexOf('jabatan');
+    const pangIdx = headers.findIndex(h => h === 'pangkat' || h === 'gol' || h === 'golongan');
+    const masaIdx = headers.findIndex(h => h === 'masa kerja');
+    const unitIdx = headers.findIndex(h => h === 'unit kerja' || h === 'perangkat daerah');
+    const telpIdx = headers.findIndex(h => h === 'telp' || h === 'no hp' || h === 'telepon');
+    const atasanNamaIdx = headers.findIndex(h => h === 'atasan nama');
+    const atasanNipIdx = headers.findIndex(h => h === 'atasan nip');
+
+    let matchedRow = -1;
+    for (let i = 1; i < data.length; i++) {
+      const rowNip = nipIdx !== -1 ? String(data[i][nipIdx] || '').trim() : '';
+      const rowNama = namaIdx !== -1 ? String(data[i][namaIdx] || '').trim().toLowerCase() : '';
+
+      if (nip && rowNip && rowNip === nip) {
+        matchedRow = i + 1;
+        break;
+      }
+      if (nama && rowNama && rowNama === nama.toLowerCase()) {
+        matchedRow = i + 1;
+        break;
+      }
+    }
+
+    if (matchedRow > 0) {
+      // Baris pegawai sudah ada: periksa jika ada field yang masih kosong, isi dengan data input manual
+      const checkAndFill = (colIdx, val) => {
+        if (colIdx >= 0 && val) {
+          const currentVal = String(data[matchedRow - 1][colIdx] || '').trim();
+          if (!currentVal) {
+            pegSheet.getRange(matchedRow, colIdx + 1).setValue(val);
+          }
+        }
+      };
+
+      checkAndFill(nipIdx, item.nip);
+      checkAndFill(namaIdx, item.nama);
+      checkAndFill(statusIdx, item.status_kepegawaian);
+      checkAndFill(jabIdx, item.jabatan);
+      checkAndFill(pangIdx, item.pangkat_gol);
+      checkAndFill(masaIdx, item.masa_kerja);
+      checkAndFill(unitIdx, item.unit_kerja);
+      checkAndFill(telpIdx, item.telp);
+      checkAndFill(atasanNamaIdx, item.atasan_nama);
+      checkAndFill(atasanNipIdx, item.atasan_nip);
+    } else {
+      // Pegawai belum pernah ada: tambahkan baris baru ke Master Pegawai
+      const newPegRow = headers.map(h => {
+        if (h === 'nip' || h === 'ni pppk') return item.nip || '';
+        if (h === 'nama') return item.nama || '';
+        if (h === 'status') return item.status_kepegawaian || 'PPPK';
+        if (h === 'jabatan') return item.jabatan || '';
+        if (h === 'pangkat' || h === 'gol' || h === 'golongan') return item.pangkat_gol || '';
+        if (h === 'masa kerja') return item.masa_kerja || '';
+        if (h === 'unit kerja' || h === 'perangkat daerah') return item.unit_kerja || 'Dinas Kesehatan';
+        if (h === 'telp' || h === 'no hp' || h === 'telepon') return item.telp || '';
+        if (h === 'atasan nama') return item.atasan_nama || '';
+        if (h === 'atasan nip') return item.atasan_nip || '';
+        return '';
+      });
+      pegSheet.appendRow(newPegRow);
+    }
+
+    // Sinkronisasi juga ke sheet Rekap Cuti jika belum ada
+    let rekapSheet = ss.getSheetByName(SHEET_NAMES.REKAP);
+    if (rekapSheet && nip) {
+      const rekapData = rekapSheet.getDataRange().getValues();
+      const rekapHeaders = rekapData[0].map(h => String(h || '').trim().toLowerCase());
+      const rekapNipIdx = rekapHeaders.indexOf('nip');
+      let rekapFound = false;
+
+      if (rekapNipIdx !== -1) {
+        for (let r = 1; r < rekapData.length; r++) {
+          if (String(rekapData[r][rekapNipIdx] || '').trim() === nip) {
+            rekapFound = true;
+            break;
+          }
+        }
+        if (!rekapFound) {
+          const newRekapRow = rekapHeaders.map(h => {
+            if (h === 'nip') return nip;
+            if (h === 'nama') return nama;
+            if (h === 'jatah cuti') return 12;
+            if (h === 'n-2') return 0;
+            if (h === 'n-1') return 0;
+            if (h === 'n') return 12;
+            if (h === 'sisa cuti saat ini') return 12;
+            return '';
+          });
+          rekapSheet.appendRow(newRekapRow);
+        }
+      }
+    }
+  } catch (err) {
+    console.error('syncPegawaiFromCuti error:', err);
   }
 }
