@@ -72,11 +72,23 @@
         </button>
       </form>
 
-      <div class="pt-3 border-t border-slate-100 text-center space-y-1">
-        <p class="text-[11px] text-slate-400">Akses default awal: Login <code
-            class="font-bold text-slate-600">admin</code> &bull; Password <code
-            class="font-bold text-slate-600">dinkes123</code></p>
-        <p class="text-[10px] text-slate-400">Dapat diubah melalui menu Pengaturan setelah masuk.</p>
+      <div class="pt-3 border-t border-slate-100 space-y-2">
+        <p class="text-[11px] font-bold text-slate-500 uppercase tracking-wider text-center">Pilihan Cepat Login:</p>
+        <div class="grid grid-cols-3 gap-1.5">
+          <button type="button" onclick="quickSelectAccount('superadmin')" class="p-1.5 text-center rounded-lg border border-rose-200 bg-rose-50/70 hover:bg-rose-100 text-rose-800 transition">
+            <div class="font-extrabold text-[10px]">SUPER ADMIN</div>
+            <div class="text-[9px] text-slate-500">Akses Penuh</div>
+          </button>
+          <button type="button" onclick="quickSelectAccount('admin')" class="p-1.5 text-center rounded-lg border border-amber-200 bg-amber-50/70 hover:bg-amber-100 text-amber-800 transition">
+            <div class="font-extrabold text-[10px]">ADMIN</div>
+            <div class="text-[9px] text-slate-500">Kelola & Cetak</div>
+          </button>
+          <button type="button" onclick="quickSelectAccount('user')" class="p-1.5 text-center rounded-lg border border-teal-200 bg-teal-50/70 hover:bg-teal-100 text-teal-800 transition">
+            <div class="font-extrabold text-[10px]">USER</div>
+            <div class="text-[9px] text-slate-500">Khusus Input</div>
+          </button>
+        </div>
+        <p class="text-[10px] text-slate-400 text-center">Super Admin memiliki hak eksklusif untuk mengubah manual saldo cuti N-2, N-1, dan N.</p>
       </div>
     </div>
   </div>
@@ -153,10 +165,10 @@
         <span>Master Data Pegawai</span>
       </button>
 
-      <div class="px-3 pt-4 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">Pengaturan</div>
+      <div class="px-3 pt-4 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 admin-only-feature">Pengaturan</div>
 
-      <button onclick="openConfigModal()"
-        class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition">
+      <button onclick="openConfigModal()" id="nav-config"
+        class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition admin-only-feature">
         <i data-lucide="sliders-horizontal" class="w-4 h-4"></i>
         <span>Pengaturan API & Pejabat</span>
       </button>
@@ -168,7 +180,7 @@
         <div class="flex items-center justify-between">
           <span class="text-[10px] font-bold uppercase tracking-wider text-teal-700">Pejabat Berwenang</span>
           <button onclick="openConfigModal()"
-            class="text-[10px] text-slate-400 hover:text-teal-600 font-semibold">Ubah</button>
+            class="text-[10px] text-slate-400 hover:text-teal-600 font-semibold admin-only-feature">Ubah</button>
         </div>
         <p class="text-slate-800 font-bold leading-snug truncate" id="sidebarPejabatNama">dr. Allin Hendalin Mahdaniar,
           M.K.M.</p>
@@ -183,7 +195,7 @@
           </div>
           <div class="min-w-0">
             <p class="text-[11px] font-bold text-slate-800 truncate" id="sidebarPetugasNama">Petugas Admin</p>
-            <p class="text-[10px] text-emerald-600 font-semibold">Sesi Aktif</p>
+            <div id="currentUserRoleBadge" class="mt-0.5"></div>
           </div>
         </div>
         <button onclick="logoutPetugas()" class="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50 transition"
@@ -240,6 +252,97 @@
            MENU 1: DASHBOARD
            ========================================== -->
       <section id="menu-dashboard" class="space-y-5">
+
+        <!-- Banner Desain Eksplorasi Cuti ASN Modern -->
+        <div class="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 via-teal-950 to-slate-900 border border-teal-500/30 p-5 sm:p-7 text-white shadow-xl">
+          <div class="absolute -right-10 -bottom-10 w-64 h-64 bg-teal-500/10 rounded-full blur-3xl pointer-events-none"></div>
+          <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div class="space-y-2 max-w-xl">
+              <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-widest bg-teal-500/20 text-teal-300 border border-teal-400/30">
+                <i data-lucide="sparkles" class="w-3.5 h-3.5 text-teal-400"></i>
+                <span>Aplikasi Penjagaan Cuti ASN (PNS & PPPK)</span>
+              </div>
+              <h1 class="text-xl sm:text-2xl font-black text-white tracking-tight">Sistem Penjagaan & Cek Saldo Cuti Berjalan</h1>
+              <p class="text-xs text-slate-300 leading-relaxed">
+                Pengelolaan cuti online Dinas Kesehatan Kota Tangerang Selatan mengacu pada regulasi BKN No. 24/2017 jo. No. 7/2021 dengan perhitungan FIFO N-2, N-1, dan N berjalan.
+              </p>
+            </div>
+
+            <!-- Kartu Cincin Saldo Cuti Interaktif Dinamis -->
+            <div class="flex items-center gap-4 bg-slate-800/80 backdrop-blur-md p-4 rounded-2xl border border-teal-500/20 shrink-0">
+              <div class="relative w-20 h-20 flex items-center justify-center">
+                <!-- Circular Ring Gauge -->
+                <svg class="w-20 h-20 transform -rotate-90" viewBox="0 0 36 36">
+                  <path class="text-slate-700/60" stroke-width="3.5" stroke="currentColor" fill="none"
+                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                  <path class="text-teal-400" stroke-width="3.5" stroke-dasharray="75, 100" stroke-linecap="round" stroke="currentColor" fill="none"
+                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                </svg>
+                <div class="absolute inset-0 flex flex-col items-center justify-center text-center">
+                  <span class="text-lg font-black text-white leading-none" id="dashBannerSaldoNum">12</span>
+                  <span class="text-[9px] font-bold text-teal-300 uppercase tracking-wider mt-0.5">Hari</span>
+                </div>
+              </div>
+              <div>
+                <p class="text-[10px] font-extrabold uppercase tracking-wider text-teal-300">Hak Cuti Standar (N)</p>
+                <p class="text-xs text-slate-200 font-medium mt-0.5">Tahun Berjalan 2026</p>
+                <div class="flex items-center gap-1.5 mt-2">
+                  <button onclick="openFormModal()" class="px-2.5 py-1 rounded-lg text-[10px] font-extrabold bg-teal-500 hover:bg-teal-400 text-slate-950 transition inline-flex items-center gap-1">
+                    <i data-lucide="plus-circle" class="w-3 h-3"></i>
+                    <span>Ajukan Cuti Baru</span>
+                  </button>
+                  <button onclick="switchMenu('rekap')" class="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-white/10 hover:bg-white/20 text-white transition">
+                    Cek Sisa
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Action Buttons Jenis Cuti (Seperti di gambar mockup) -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-5 pt-4 border-t border-white/10">
+            <button onclick="quickOpenCutiModalWithJenis('Cuti Tahunan')" class="p-2.5 rounded-xl bg-gradient-to-r from-teal-600/40 to-teal-500/20 border border-teal-500/30 hover:border-teal-400 text-left transition flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-lg bg-teal-500 text-slate-950 flex items-center justify-center font-bold shrink-0">
+                <i data-lucide="calendar" class="w-4 h-4"></i>
+              </div>
+              <div>
+                <div class="text-xs font-bold text-white leading-tight">Cuti Tahunan</div>
+                <div class="text-[10px] text-teal-200">12 Hari Kerja</div>
+              </div>
+            </button>
+
+            <button onclick="quickOpenCutiModalWithJenis('Cuti Sakit')" class="p-2.5 rounded-xl bg-gradient-to-r from-amber-600/40 to-amber-500/20 border border-amber-500/30 hover:border-amber-400 text-left transition flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-lg bg-amber-500 text-slate-950 flex items-center justify-center font-bold shrink-0">
+                <i data-lucide="activity" class="w-4 h-4"></i>
+              </div>
+              <div>
+                <div class="text-xs font-bold text-white leading-tight">Cuti Sakit</div>
+                <div class="text-[10px] text-amber-200">Surat Dokter</div>
+              </div>
+            </button>
+
+            <button onclick="quickOpenCutiModalWithJenis('Cuti Melahirkan')" class="p-2.5 rounded-xl bg-gradient-to-r from-rose-600/40 to-rose-500/20 border border-rose-500/30 hover:border-rose-400 text-left transition flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-lg bg-rose-500 text-slate-950 flex items-center justify-center font-bold shrink-0">
+                <i data-lucide="baby" class="w-4 h-4"></i>
+              </div>
+              <div>
+                <div class="text-xs font-bold text-white leading-tight">Cuti Melahirkan</div>
+                <div class="text-[10px] text-rose-200">3 Bulan</div>
+              </div>
+            </button>
+
+            <button onclick="quickOpenCutiModalWithJenis('Cuti Pelaksanaan Ibadah Haji')" class="p-2.5 rounded-xl bg-gradient-to-r from-purple-600/40 to-purple-500/20 border border-purple-500/30 hover:border-purple-400 text-left transition flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-lg bg-purple-500 text-slate-950 flex items-center justify-center font-bold shrink-0">
+                <i data-lucide="award" class="w-4 h-4"></i>
+              </div>
+              <div>
+                <div class="text-xs font-bold text-white leading-tight">Cuti Haji / Alasan Penting</div>
+                <div class="text-[10px] text-purple-200">Izin Walikota / Kadis</div>
+              </div>
+            </button>
+          </div>
+        </div>
+
         <!-- 4 Kartu Ringkasan Elegan -->
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <div
@@ -1068,6 +1171,72 @@
           </div>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       MODAL EDIT SALDO CUTI (KHUSUS SUPER ADMIN)
+       ========================================== -->
+  <div id="modalEditSaldoSuperAdmin" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 hidden no-print">
+    <div class="bg-white rounded-3xl max-w-lg w-full shadow-2xl border border-slate-200/90 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+      <div class="bg-gradient-to-r from-slate-900 via-teal-950 to-slate-900 px-6 py-4.5 flex items-center justify-between text-white border-b border-teal-500/20">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-teal-500 text-slate-950 flex items-center justify-center font-black">
+            <i data-lucide="shield-alert" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-sm" id="modalEditSaldoTitle">Ubah Saldo Cuti Manual (Super Admin)</h3>
+            <p class="text-[11px] text-teal-300">Penyesuaian Akumulasi & Penangguhan N-2, N-1, N BKN</p>
+          </div>
+        </div>
+        <button onclick="closeModalEditSaldoSuperAdmin()" class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <form onsubmit="submitEditSaldoSuperAdmin(event)" class="p-6 space-y-4 text-xs">
+        <input type="hidden" id="editSaldoNip">
+
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Nama Pegawai</label>
+          <input type="text" id="editSaldoNama" readonly class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-100 font-semibold text-slate-800 cursor-not-allowed">
+        </div>
+
+        <div class="p-3.5 bg-amber-50 border border-amber-200 rounded-2xl space-y-1 text-amber-900 text-[11px]">
+          <div class="font-bold flex items-center gap-1.5 text-amber-800">
+            <i data-lucide="alert-triangle" class="w-3.5 h-3.5 shrink-0"></i>
+            <span>Ketentuan Regulasi BKN No. 24/2017 jo. No. 7/2021:</span>
+          </div>
+          <p>&bull; <b>N-2 (2 thn lalu):</b> Maksimal <b>6 hari</b> (Hanya jika ada penangguhan cuti dinas resmi).</p>
+          <p>&bull; <b>N-1 (1 thn lalu):</b> Maksimal <b>6 hari</b> (Sisa akumulasi tahun sebelumnya).</p>
+          <p>&bull; <b>N (Tahun Berjalan):</b> Maksimal <b>12 hari kerja</b>.</p>
+        </div>
+
+        <div class="grid grid-cols-3 gap-3">
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Saldo Cuti N-2 (Maks 6)</label>
+            <input type="number" id="editSaldoN2" min="0" max="6" oninput="hitungPreviewTotalSaldoModal()" required class="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500 font-bold text-slate-800">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Saldo Cuti N-1 (Maks 6)</label>
+            <input type="number" id="editSaldoN1" min="0" max="6" oninput="hitungPreviewTotalSaldoModal()" required class="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500 font-bold text-slate-800">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Saldo Cuti N (Maks 12)</label>
+            <input type="number" id="editSaldoN" min="0" max="12" oninput="hitungPreviewTotalSaldoModal()" required class="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500 font-bold text-slate-800">
+          </div>
+        </div>
+
+        <div class="p-3 bg-teal-50 border border-teal-200/80 rounded-xl flex items-center justify-between">
+          <span class="font-bold text-teal-900">Total Hak Saldo Baru:</span>
+          <span class="font-extrabold text-teal-700 text-sm" id="editSaldoPreviewTotal">12 Hari</span>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+          <button type="button" onclick="closeModalEditSaldoSuperAdmin()" class="px-4 py-2 rounded-xl font-semibold text-slate-500 hover:bg-slate-100">Batal</button>
+          <button type="submit" id="btnSubmitEditSaldo" class="px-4 py-2 rounded-xl font-bold bg-teal-600 text-white hover:bg-teal-700 shadow-md">Simpan Perubahan Saldo</button>
+        </div>
+      </form>
     </div>
   </div>
 

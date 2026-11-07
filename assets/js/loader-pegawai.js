@@ -386,7 +386,14 @@ function getPegawaiField(obj, keys) {
         // Hitung saldo BKN FIFO
         let n2 = 0, n1 = 0, n = 12, sisaTotal = 12;
         if (typeof hitungSaldoCutiBKN === 'function') {
-          const rawRekap = (typeof DEMO_REKAP !== 'undefined' && DEMO_REKAP[nip]) ? DEMO_REKAP[nip] : null;
+          let rawRekap = null;
+          const localRekap = JSON.parse(localStorage.getItem('DINKES_LOCAL_REKAP_DATA') || 'null');
+          if (localRekap && localRekap[nip]) {
+            rawRekap = localRekap[nip];
+          } else if (typeof DEMO_REKAP !== 'undefined' && DEMO_REKAP[nip]) {
+            rawRekap = DEMO_REKAP[nip];
+          }
+
           const pegHistory = state.cutiList.filter(c => String(c.nip).trim() === String(nip).trim());
           const saldo = hitungSaldoCutiBKN(rawRekap, pegHistory);
           n2 = saldo.sisaN2;
@@ -394,6 +401,13 @@ function getPegawaiField(obj, keys) {
           n = saldo.sisaN;
           sisaTotal = saldo.sisaTotal;
         }
+
+        const isSuper = (typeof isSuperAdmin === 'function' && isSuperAdmin());
+        const editSaldoBtn = isSuper ? `
+          <button onclick="openModalEditSaldoSuperAdmin('${escapeAttr(nip)}', '${escapeAttr(nama)}', ${n2}, ${n1}, ${n})" class="p-1 rounded-lg text-slate-400 hover:text-teal-600 hover:bg-teal-50 transition" title="Edit Manual N-2, N-1, N (Super Admin)">
+            <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+          </button>
+        ` : '';
 
         return `
           <tr class="hover:bg-slate-50/80 transition">
@@ -411,7 +425,10 @@ function getPegawaiField(obj, keys) {
               <span class="px-2 py-0.5 rounded-full text-[11px] font-extrabold bg-teal-50 text-teal-800 border border-teal-200/60">${sisaTotal} Hari</span>
             </td>
             <td class="py-2.5 px-3 text-right">
-              <button onclick="cariRekapNip('${escapeAttr(nip)}', '${escapeAttr(nama)}')" class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-teal-600 text-white hover:bg-teal-700 transition">Rincian</button>
+              <div class="inline-flex items-center gap-1.5">
+                ${editSaldoBtn}
+                <button onclick="cariRekapNip('${escapeAttr(nip)}', '${escapeAttr(nama)}')" class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-teal-600 text-white hover:bg-teal-700 transition">Rincian</button>
+              </div>
             </td>
           </tr>
         `;
@@ -560,6 +577,14 @@ function getPegawaiField(obj, keys) {
         let rawRekap = null;
         if (res.status === 200 && res.data) {
           rawRekap = res.data;
+        } else {
+          // Cek di penyimpanan lokal jika offline/GAS lama
+          const localRekap = JSON.parse(localStorage.getItem('DINKES_LOCAL_REKAP_DATA') || 'null');
+          if (localRekap && localRekap[nip]) {
+            rawRekap = localRekap[nip];
+          } else if (typeof DEMO_REKAP !== 'undefined' && DEMO_REKAP[nip]) {
+            rawRekap = DEMO_REKAP[nip];
+          }
         }
 
         // Lakukan perhitungan BKN FIFO
@@ -626,5 +651,115 @@ function getPegawaiField(obj, keys) {
         }
       } catch (err) {
         showToast('Gagal mengambil data rekap: ' + err.message, true);
+      }
+    }
+
+    // Modal Edit Saldo N-2, N-1, N Khusus Super Admin
+    function openModalEditSaldoSuperAdmin(nip, nama, n2, n1, n) {
+      if (!isSuperAdmin()) {
+        showToast('Hanya Super Admin yang diizinkan mengedit manual saldo cuti N-2, N-1, N.', true);
+        return;
+      }
+
+      document.getElementById('editSaldoNip').value = nip;
+      document.getElementById('editSaldoNama').value = nama;
+      document.getElementById('editSaldoN2').value = n2 || 0;
+      document.getElementById('editSaldoN1').value = n1 || 0;
+      document.getElementById('editSaldoN').value = n !== undefined ? n : 12;
+      hitungPreviewTotalSaldoModal();
+
+      document.getElementById('modalEditSaldoTitle').textContent = `Ubah Saldo Cuti — ${nama}`;
+      document.getElementById('modalEditSaldoSuperAdmin').classList.remove('hidden');
+    }
+
+    function closeModalEditSaldoSuperAdmin() {
+      const modal = document.getElementById('modalEditSaldoSuperAdmin');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    function hitungPreviewTotalSaldoModal() {
+      const n2 = Math.min(6, Math.max(0, parseInt(document.getElementById('editSaldoN2').value, 10) || 0));
+      const n1 = Math.min(6, Math.max(0, parseInt(document.getElementById('editSaldoN1').value, 10) || 0));
+      const n = Math.min(12, Math.max(0, parseInt(document.getElementById('editSaldoN').value, 10) || 0));
+      const total = n2 + n1 + n;
+      const previewEl = document.getElementById('editSaldoPreviewTotal');
+      if (previewEl) previewEl.textContent = `${total} Hari (N-2: ${n2} + N-1: ${n1} + N: ${n})`;
+    }
+
+    async function submitEditSaldoSuperAdmin(e) {
+      e.preventDefault();
+      if (!isSuperAdmin()) {
+        showToast('Akses ditolak: Hanya Super Admin!', true);
+        return;
+      }
+
+      const nip = document.getElementById('editSaldoNip').value.trim();
+      const nama = document.getElementById('editSaldoNama').value.trim();
+      const n2 = Math.min(6, Math.max(0, parseInt(document.getElementById('editSaldoN2').value, 10) || 0));
+      const n1 = Math.min(6, Math.max(0, parseInt(document.getElementById('editSaldoN1').value, 10) || 0));
+      const n = Math.min(12, Math.max(0, parseInt(document.getElementById('editSaldoN').value, 10) || 0));
+
+      const u = getCurrentUser();
+      const payload = {
+        action: 'updateRekapSaldo',
+        nip: nip,
+        nama: nama,
+        n2: n2,
+        n1: n1,
+        n: n,
+        updated_by: u ? `${u.nama} (${u.role})` : 'Super Admin'
+      };
+
+      const btn = document.getElementById('btnSubmitEditSaldo');
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = `<span>Menyimpan...</span>`;
+      }
+
+      try {
+        // Simpan juga ke cache lokal
+        if (typeof DEMO_REKAP !== 'undefined') {
+          DEMO_REKAP[nip] = {
+            'NIP': nip,
+            'Nama': nama,
+            'Jatah Cuti': 12,
+            'N-2': n2,
+            'N-1': n1,
+            'N': n,
+            'Sisa Cuti Saat Ini': n2 + n1 + n
+          };
+          localStorage.setItem('DINKES_LOCAL_REKAP_DATA', JSON.stringify(DEMO_REKAP));
+        }
+
+        const res = await apiPost(payload);
+        if (res.status === 200) {
+          showToast(res.message || 'Saldo cuti N-2, N-1, N berhasil diperbarui!');
+          closeModalEditSaldoSuperAdmin();
+          renderTableRekapPegawai();
+          // Jika detail sedang terbuka untuk pegawai ini, refresh
+          const curTitle = document.getElementById('rekapHeaderTitle')?.textContent || '';
+          if (curTitle.includes(nip)) {
+            cariRekapNip(nip, nama);
+          }
+        } else if (res.error && res.error.includes('Aksi POST tidak valid')) {
+          // Bila Web App Apps Script belum dideploy ulang versi terbarunya, fallback simpan lokal berhasil
+          showToast('Saldo cuti berhasil diperbarui di sistem! (Catatan: Deploy versi baru di Apps Script agar sinkron ke Google Sheet)', false);
+          closeModalEditSaldoSuperAdmin();
+          renderTableRekapPegawai();
+          const curTitle = document.getElementById('rekapHeaderTitle')?.textContent || '';
+          if (curTitle.includes(nip)) {
+            cariRekapNip(nip, nama);
+          }
+        } else {
+          showToast(res.error || 'Gagal menyimpan saldo cuti', true);
+        }
+      } catch (err) {
+        showToast('Error koneksi: ' + err.message, true);
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = `<span>Simpan Perubahan Saldo</span>`;
+        }
+        if (typeof lucide !== 'undefined') lucide.createIcons();
       }
     }

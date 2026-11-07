@@ -5,6 +5,12 @@ Aplikasi Sistem Informasi Pengelolaan dan Penjagaan Cuti Pegawai (PNS & PPPK) be
 ## 🚀 Fitur Utama
 
 - **Pembedaan PNS & PPPK**: Otomatis menyesuaikan formulir permohonan BKN 8 bagian (PNS) atau Surat Permohonan (PPPK) serta label NIP / NI PPPK.
+- **Tiga Tingkat Hak Akses Pengguna (Multi-Role)**:
+  - **Super Admin**: Akses penuh ke seluruh menu, pelacakan penginputan, serta hak eksklusif mengubah manual saldo hak cuti N-2, N-1, dan N BKN.
+  - **Admin**: Mengelola pengajuan cuti, mencetak surat resmi, melihat rekapitulasi data.
+  - **User (Pegawai Penginput)**: Khusus difokuskan untuk mengakses formulir pengajuan cuti baru dan melihat riwayat pengajuannya tanpa akses ke master data & konfigurasi.
+- **Pencatatan Audit Trail ke Database Sheet**: Setiap pengajuan baru maupun update merekam nama penginput dan role penginput (`created_by`, `role_penginput`) sehingga Super Admin dapat memantau seluruh perubahan secara transparan.
+- **Desain Modern Dinamis (Eksplorasi Opsi A)**: Ring indicator saldo sisa cuti, kartu cepat jenis cuti (Tahunan, Sakit, Melahirkan, Haji), berpadu dengan tema warna khas Dinas Kesehatan.
 - **Perhitungan Saldo Cuti FIFO BKN**: Sesuai Peraturan BKN No. 24 Tahun 2017 jo. Peraturan BKN No. 7 Tahun 2021 (N-2, N-1, N berjalan).
 - **Cetak Dokumen Resmi (A4)**: Cetak Formulir Cuti, Surat Permohonan Pegawai, dan Surat Izin Cuti Resmi Berkop Dinas Kesehatan dengan Nomor & Tanggal Surat.
 - **Pencarian Cepat & Pagination**: Tabel Master Pegawai, Rekapitulasi Saldo Cuti, dan Daftar Permohonan cuti searchable dengan tampilan 20 data per halaman.

@@ -431,6 +431,26 @@ const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwVmRv3_QAh9
           localStorage.setItem('DEMO_DINKES_CUTI', JSON.stringify(list));
           return { status: 200, message: 'Data permohonan cuti dihapus' };
         }
+        if (payload.action === 'updateRekapSaldo') {
+          const nip = String(payload.nip || '').trim();
+          const n2Val = Number(payload.n2 !== undefined ? payload.n2 : 0);
+          const n1Val = Number(payload.n1 !== undefined ? payload.n1 : 0);
+          const nVal = Number(payload.n !== undefined ? payload.n : 12);
+          const totalSisa = n2Val + n1Val + nVal;
+
+          let rekapObj = JSON.parse(localStorage.getItem('DINKES_LOCAL_REKAP_DATA') || JSON.stringify(DEMO_REKAP));
+          rekapObj[nip] = {
+            'NIP': nip,
+            'Nama': payload.nama || '',
+            'Jatah Cuti': 12,
+            'N-2': n2Val,
+            'N-1': n1Val,
+            'N': nVal,
+            'Sisa Cuti Saat Ini': totalSisa
+          };
+          localStorage.setItem('DINKES_LOCAL_REKAP_DATA', JSON.stringify(rekapObj));
+          return { status: 200, message: `Saldo cuti N-2, N-1, dan N untuk ${nip} berhasil diperbarui` };
+        }
       }
 
       const res = await fetch(state.apiUrl, {
@@ -526,6 +546,15 @@ const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwVmRv3_QAh9
       }
     }
 
+    function quickOpenCutiModalWithJenis(jenis) {
+      openFormModal();
+      const sel = document.getElementById('f_jenis_cuti');
+      if (sel) {
+        sel.value = jenis;
+        onChangeJenisCuti();
+      }
+    }
+
     function renderDashboard() {
       const total = state.cutiList.length;
       const menunggu = state.cutiList.filter(c => (c.status_pengajuan || 'Menunggu') === 'Menunggu').length;
@@ -536,6 +565,12 @@ const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwVmRv3_QAh9
       document.getElementById('statMenunggu').textContent = menunggu;
       document.getElementById('statDisetujui').textContent = disetujui;
       document.getElementById('statDitolak').textContent = ditolak;
+
+      // Update ring gauge banner dashboard jika ada
+      const bannerSaldo = document.getElementById('dashBannerSaldoNum');
+      if (bannerSaldo) {
+        bannerSaldo.textContent = '12';
+      }
 
       const jenisList = [
         { label: 'Cuti Tahunan', color: 'bg-teal-500' },
@@ -661,11 +696,16 @@ const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwVmRv3_QAh9
           ? `<span class="ml-1.5 px-1.5 py-0.2 rounded text-[9.5px] font-bold bg-blue-50 text-blue-700 border border-blue-200/60">PNS</span>`
           : `<span class="ml-1.5 px-1.5 py-0.2 rounded text-[9.5px] font-bold bg-teal-50 text-teal-700 border border-teal-200/60">PPPK</span>`;
 
+        const createdByLabel = item.created_by
+          ? `<div class="text-[10px] text-slate-400 mt-1 flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-teal-500"></span>Oleh: <span class="font-semibold text-slate-600">${escapeHtml(item.created_by)}</span></div>`
+          : '';
+
         return `
         <tr class="hover:bg-slate-50/70 transition">
           <td class="py-3 px-4 align-top">
             <div class="font-mono text-[11px] font-bold text-teal-700">${escapeHtml(item.id_pengajuan || '-')}</div>
             <div class="text-[11px] text-slate-400 mt-0.5">${formatLongIndoDate(item.tanggal_surat)}</div>
+            ${createdByLabel}
           </td>
           <td class="py-3 px-4 align-top">
             <div class="font-bold text-slate-900 flex items-center">${escapeHtml(item.nama || '-')}${statusBadgeMini}</div>
@@ -1667,6 +1707,8 @@ const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwVmRv3_QAh9
       const btn = document.getElementById('btnSubmitForm');
       const id = document.getElementById('f_id_pengajuan').value;
 
+      const u = (typeof getCurrentUser === 'function') ? getCurrentUser() : null;
+
       const payload = {
         action: id ? 'update' : 'create',
         id_pengajuan: id || undefined,
@@ -1693,7 +1735,9 @@ const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwVmRv3_QAh9
         pejabat_nama: document.getElementById('f_pejabat_nama').value.trim(),
         pejabat_nip: document.getElementById('f_pejabat_nip').value.trim(),
         status_pengajuan: document.getElementById('f_status_pengajuan').value,
-        catatan_atasan: document.getElementById('f_catatan_atasan').value.trim()
+        catatan_atasan: document.getElementById('f_catatan_atasan').value.trim(),
+        created_by: u ? `${u.nama} (${u.role})` : 'Petugas',
+        role_penginput: u ? u.role : 'user'
       };
 
       btn.disabled = true;

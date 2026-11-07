@@ -18,10 +18,11 @@ const SHEET_HEADERS = {
     'alasan_cuti', 'alamat_cuti', 'status_pengajuan', 'catatan_atasan',
     'is_deleted', 'created_at', 'updated_at',
     'masa_kerja', 'unit_kerja', 'telp', 'sisa_cuti_tahunan',
-    'jenis_pejabat', 'atasan_nama', 'atasan_nip', 'pejabat_nama', 'pejabat_nip'
+    'jenis_pejabat', 'atasan_nama', 'atasan_nip', 'pejabat_nama', 'pejabat_nip',
+    'created_by', 'role_penginput'
   ],
   PEGAWAI: ['NIP', 'Nama', 'Jabatan', 'Pangkat', 'Masa Kerja', 'Unit Kerja', 'Telp', 'Atasan Nama', 'Atasan NIP', 'Status'],
-  REKAP: ['NIP', 'Nama', 'Jatah Cuti', 'N-2', 'N-1', 'N', 'Sisa Cuti Saat Ini']
+  REKAP: ['NIP', 'Nama', 'Jatah Cuti', 'N-2', 'N-1', 'N', 'Sisa Cuti Saat Ini', 'updated_at', 'updated_by']
 };
 
 /**
@@ -222,7 +223,9 @@ function doPost(e) {
         atasan_nama: payload.atasan_nama || '',
         atasan_nip: String(payload.atasan_nip || ''),
         pejabat_nama: payload.pejabat_nama || '',
-        pejabat_nip: String(payload.pejabat_nip || '')
+        pejabat_nip: String(payload.pejabat_nip || ''),
+        created_by: payload.created_by || 'Petugas',
+        role_penginput: payload.role_penginput || 'user'
       };
 
       const newRow = headers.map(h => record[h] !== undefined ? record[h] : '');
@@ -256,7 +259,8 @@ function doPost(e) {
         'jenis_cuti', 'tanggal_mulai', 'tanggal_selesai', 'lama_cuti',
         'alasan_cuti', 'alamat_cuti', 'status_pengajuan', 'catatan_atasan',
         'masa_kerja', 'unit_kerja', 'telp', 'sisa_cuti_tahunan',
-        'jenis_pejabat', 'atasan_nama', 'atasan_nip', 'pejabat_nama', 'pejabat_nip'
+        'jenis_pejabat', 'atasan_nama', 'atasan_nip', 'pejabat_nama', 'pejabat_nip',
+        'created_by', 'role_penginput'
       ];
 
       updateFields.forEach(field => {
@@ -303,6 +307,72 @@ function doPost(e) {
       if (updatedAtCol > 0) sheet.getRange(rowIndex, updatedAtCol).setValue(now);
 
       return jsonResponse({ message: 'Pengajuan cuti berhasil dihapus' });
+    }
+
+    // 4. UPDATE REKAP SALDO CUTI (KHUSUS SUPER ADMIN)
+    if (action === 'updateRekapSaldo') {
+      const nip = String(payload.nip || '').trim();
+      if (!nip) {
+        return jsonResponse({ error: 'NIP wajib disertakan' }, 400);
+      }
+
+      let rekapSheet = ss.getSheetByName(SHEET_NAMES.REKAP);
+      if (!rekapSheet) {
+        setupSheets();
+        rekapSheet = ss.getSheetByName(SHEET_NAMES.REKAP);
+      }
+
+      const rekapData = rekapSheet.getDataRange().getValues();
+      const rekapHeaders = rekapData[0].map(h => String(h || '').trim().toLowerCase());
+      const nipIdx = rekapHeaders.indexOf('nip');
+      const n2Idx = rekapHeaders.indexOf('n-2');
+      const n1Idx = rekapHeaders.indexOf('n-1');
+      const nIdx = rekapHeaders.indexOf('n');
+      const sisaIdx = rekapHeaders.indexOf('sisa cuti saat ini');
+      const jatahIdx = rekapHeaders.indexOf('jatah cuti');
+      const updAtIdx = rekapHeaders.indexOf('updated_at');
+      const updByIdx = rekapHeaders.indexOf('updated_by');
+
+      let foundRow = -1;
+      for (let r = 1; r < rekapData.length; r++) {
+        if (String(rekapData[r][nipIdx] || '').trim() === nip) {
+          foundRow = r + 1;
+          break;
+        }
+      }
+
+      const n2Val = Number(payload.n2 !== undefined ? payload.n2 : 0);
+      const n1Val = Number(payload.n1 !== undefined ? payload.n1 : 0);
+      const nVal = Number(payload.n !== undefined ? payload.n : 12);
+      const totalSisa = n2Val + n1Val + nVal;
+
+      if (foundRow > 0) {
+        if (n2Idx >= 0) rekapSheet.getRange(foundRow, n2Idx + 1).setValue(n2Val);
+        if (n1Idx >= 0) rekapSheet.getRange(foundRow, n1Idx + 1).setValue(n1Val);
+        if (nIdx >= 0) rekapSheet.getRange(foundRow, nIdx + 1).setValue(nVal);
+        if (sisaIdx >= 0) rekapSheet.getRange(foundRow, sisaIdx + 1).setValue(totalSisa);
+        if (updAtIdx >= 0) rekapSheet.getRange(foundRow, updAtIdx + 1).setValue(now);
+        if (updByIdx >= 0) rekapSheet.getRange(foundRow, updByIdx + 1).setValue(payload.updated_by || 'Super Admin');
+      } else {
+        const newRow = rekapHeaders.map(h => {
+          if (h === 'nip') return nip;
+          if (h === 'nama') return payload.nama || '';
+          if (h === 'jatah cuti') return 12;
+          if (h === 'n-2') return n2Val;
+          if (h === 'n-1') return n1Val;
+          if (h === 'n') return nVal;
+          if (h === 'sisa cuti saat ini') return totalSisa;
+          if (h === 'updated_at') return now;
+          if (h === 'updated_by') return payload.updated_by || 'Super Admin';
+          return '';
+        });
+        rekapSheet.appendRow(newRow);
+      }
+
+      return jsonResponse({
+        message: `Saldo cuti N-2, N-1, dan N untuk ${nip} berhasil diperbarui oleh Super Admin`,
+        data: { nip, n2: n2Val, n1: n1Val, n: nVal, totalSisa }
+      });
     }
 
     return jsonResponse({ error: 'Aksi POST tidak valid' }, 400);
